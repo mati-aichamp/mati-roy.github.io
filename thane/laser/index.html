@@ -69,7 +69,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; f
 }
 #winPanel button:hover { background: rgba(100, 210, 255, 0.3); }
 
-canvas { display: block; }
+canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
 </style>
 </head>
 <body>
@@ -424,6 +424,7 @@ let beams = [];
 let dragging = null;
 let dragOffset = { x: 0, y: 0 };
 let hoveredObj = null;
+let selectedObj = null;
 let levelWon = false;
 let winShownTime = 0;
 
@@ -435,6 +436,14 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
+
+function clientToCanvas(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (canvas.width / rect.width),
+    y: (clientY - rect.top) * (canvas.height / rect.height),
+  };
+}
 
 function gridToScreen(gx, gy) {
   const ox = 60;
@@ -454,6 +463,7 @@ function loadLevel(idx) {
     });
   });
   levelWon = false;
+  selectedObj = null;
   document.getElementById('winOverlay').classList.remove('show');
   document.getElementById('levelNum').textContent = currentLevel + 1;
   document.getElementById('levelName').textContent = level.name;
@@ -464,6 +474,7 @@ function loadLevel(idx) {
 function resetLevel() {
   objects.forEach(o => o.reset());
   levelWon = false;
+  selectedObj = null;
   document.getElementById('winOverlay').classList.remove('show');
 }
 
@@ -499,11 +510,11 @@ function updateToolbar() {
   const rotateInfo = document.createElement('div');
   rotateInfo.style.cssText = 'display:flex;gap:6px;margin-left:20px;align-items:center;';
   const rotLeft = document.createElement('button');
-  rotLeft.textContent = '\u21b6 Rotate';
-  rotLeft.onclick = () => { if (hoveredObj && hoveredObj.rotatable) hoveredObj.angle -= DEG15; };
+  rotLeft.textContent = '↶ Rotate';
+  rotLeft.onclick = () => { const t = hoveredObj || selectedObj; if (t && t.rotatable) t.angle -= DEG15; };
   const rotRight = document.createElement('button');
-  rotRight.textContent = 'Rotate \u21b7';
-  rotRight.onclick = () => { if (hoveredObj && hoveredObj.rotatable) hoveredObj.angle += DEG15; };
+  rotRight.textContent = 'Rotate ↷';
+  rotRight.onclick = () => { const t = hoveredObj || selectedObj; if (t && t.rotatable) t.angle += DEG15; };
   rotateInfo.appendChild(rotLeft);
   rotateInfo.appendChild(rotRight);
   bar.appendChild(rotateInfo);
@@ -558,11 +569,12 @@ function drawFilterIcon(ctx, cx, cy) {
 // ─── Input Handling ─────────────────────────────────────────────────
 canvas.addEventListener('mousedown', e => {
   if (levelWon) return;
-  const mx = e.clientX, my = e.clientY;
+  const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
     if (obj.draggable && obj.containsPoint(mx, my, 30)) {
       dragging = obj;
+      selectedObj = obj;
       dragOffset.x = mx - obj.x;
       dragOffset.y = my - obj.y;
       hoveredObj = obj;
@@ -570,10 +582,11 @@ canvas.addEventListener('mousedown', e => {
       return;
     }
   }
+  selectedObj = null;
 });
 
 canvas.addEventListener('mousemove', e => {
-  const mx = e.clientX, my = e.clientY;
+  const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
   if (dragging) {
     dragging.x = Math.max(30, Math.min(W - 30, mx - dragOffset.x));
     dragging.y = Math.max(58, Math.min(H - 82, my - dragOffset.y));
@@ -599,8 +612,9 @@ canvas.addEventListener('mouseup', () => {
 
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  if (hoveredObj && hoveredObj.rotatable) {
-    hoveredObj.angle += (e.deltaY > 0 ? 1 : -1) * DEG15;
+  const target = hoveredObj || selectedObj;
+  if (target && target.rotatable) {
+    target.angle += (e.deltaY > 0 ? 1 : -1) * DEG15;
   }
 }, { passive: false });
 
@@ -608,11 +622,12 @@ canvas.addEventListener('wheel', e => {
 canvas.addEventListener('touchstart', e => {
   if (levelWon) return;
   const t = e.touches[0];
-  const mx = t.clientX, my = t.clientY;
+  const { x: mx, y: my } = clientToCanvas(t.clientX, t.clientY);
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
     if (obj.draggable && obj.containsPoint(mx, my, 40)) {
       dragging = obj;
+      selectedObj = obj;
       dragOffset.x = mx - obj.x;
       dragOffset.y = my - obj.y;
       hoveredObj = obj;
@@ -625,8 +640,9 @@ canvas.addEventListener('touchstart', e => {
 canvas.addEventListener('touchmove', e => {
   if (dragging) {
     const t = e.touches[0];
-    dragging.x = Math.max(30, Math.min(W - 30, t.clientX - dragOffset.x));
-    dragging.y = Math.max(58, Math.min(H - 82, t.clientY - dragOffset.y));
+    const { x: tx, y: ty } = clientToCanvas(t.clientX, t.clientY);
+    dragging.x = Math.max(30, Math.min(W - 30, tx - dragOffset.x));
+    dragging.y = Math.max(58, Math.min(H - 82, ty - dragOffset.y));
     e.preventDefault();
   }
 }, { passive: false });
@@ -914,6 +930,19 @@ function drawParticles() {
   }
 }
 
+function drawSelectionRing(obj) {
+  if (!obj || !obj.draggable || obj === hoveredObj) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(100,210,255,0.35)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.arc(obj.x, obj.y, 38, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
 function drawRotateHint(obj) {
   if (!obj || !obj.rotatable || dragging) return;
   ctx.save();
@@ -1020,7 +1049,8 @@ function render() {
     }
   }
 
-  drawRotateHint(hoveredObj);
+  drawSelectionRing(selectedObj);
+  drawRotateHint(hoveredObj || selectedObj);
   drawParticles();
 
   if (levelWon) {
