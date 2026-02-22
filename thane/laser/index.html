@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <title>Laser Labyrinth</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; font-family: 'Segoe UI', system-ui, sans-serif; color: #e0e0e0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; font-family: 'Segoe UI', system-ui, sans-serif; color: #e0e0e0; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
 #topBar {
   position: fixed; top: 0; left: 0; right: 0; height: 48px;
@@ -20,8 +20,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; f
 #topBar .buttons { display: flex; gap: 8px; }
 #topBar button, #bottomBar button {
   background: rgba(100, 210, 255, 0.1); border: 1px solid rgba(100, 210, 255, 0.3);
-  color: #64d2ff; padding: 6px 16px; border-radius: 6px; cursor: pointer;
-  font-size: 13px; font-weight: 500; transition: all 0.2s;
+  color: #64d2ff; padding: 8px 18px; border-radius: 6px; cursor: pointer;
+  font-size: 14px; font-weight: 500; transition: all 0.2s; touch-action: manipulation;
+  min-height: 40px; min-width: 44px;
 }
 #topBar button:hover, #bottomBar button:hover {
   background: rgba(100, 210, 255, 0.25); border-color: rgba(100, 210, 255, 0.6);
@@ -31,7 +32,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; f
   position: fixed; bottom: 0; left: 0; right: 0; height: 72px;
   background: rgba(10, 14, 26, 0.92); border-top: 1px solid rgba(100, 200, 255, 0.15);
   display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 16px; z-index: 10;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px); touch-action: manipulation;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .tool-item {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -65,11 +67,11 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; f
 #winPanel button {
   background: rgba(100, 210, 255, 0.15); border: 1px solid rgba(100, 210, 255, 0.4);
   color: #64d2ff; padding: 10px 32px; border-radius: 8px; cursor: pointer;
-  font-size: 15px; font-weight: 600; transition: all 0.2s;
+  font-size: 15px; font-weight: 600; transition: all 0.2s; touch-action: manipulation;
 }
 #winPanel button:hover { background: rgba(100, 210, 255, 0.3); }
 
-canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; touch-action: none; }
 </style>
 </head>
 <body>
@@ -98,6 +100,12 @@ canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height:
 </div>
 
 <script>
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+document.addEventListener('touchmove', e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
 // ─── Vector Math ────────────────────────────────────────────────────
 const V = {
   add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y }),
@@ -636,6 +644,7 @@ document.addEventListener('keydown', e => {
 // Touch support
 let touchStartPos = { x: 0, y: 0 };
 canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
   if (levelWon) return;
   const t = e.touches[0];
   const { x: mx, y: my } = clientToCanvas(t.clientX, t.clientY);
@@ -648,10 +657,10 @@ canvas.addEventListener('touchstart', e => {
       dragOffset.x = mx - obj.x;
       dragOffset.y = my - obj.y;
       hoveredObj = obj;
-      e.preventDefault();
       return;
     }
   }
+  selectedObj = null;
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
