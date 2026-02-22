@@ -12,17 +12,17 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; f
 #topBar {
   position: fixed; top: 0; left: 0; right: 0; height: 48px;
   background: rgba(10, 14, 26, 0.92); border-bottom: 1px solid rgba(100, 200, 255, 0.15);
-  display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 10;
   backdrop-filter: blur(8px);
 }
-#topBar .level-info { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
+#topBar .level-info { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 #topBar .level-info span { color: #64d2ff; }
-#topBar .buttons { display: flex; gap: 8px; }
+#topBar .buttons { display: flex; gap: 4px; flex-shrink: 0; }
 #topBar button, #bottomBar button {
   background: rgba(100, 210, 255, 0.1); border: 1px solid rgba(100, 210, 255, 0.3);
-  color: #64d2ff; padding: 8px 18px; border-radius: 6px; cursor: pointer;
-  font-size: 14px; font-weight: 500; transition: all 0.2s; touch-action: manipulation;
-  min-height: 40px; min-width: 44px;
+  color: #64d2ff; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 500; transition: all 0.2s; touch-action: manipulation;
+  min-height: 38px; min-width: 40px; flex-shrink: 0;
 }
 #topBar button:hover, #bottomBar button:hover {
   background: rgba(100, 210, 255, 0.25); border-color: rgba(100, 210, 255, 0.6);
@@ -31,19 +31,23 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; f
 #bottomBar {
   position: fixed; bottom: 0; left: 0; right: 0; height: 72px;
   background: rgba(10, 14, 26, 0.92); border-top: 1px solid rgba(100, 200, 255, 0.15);
-  display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 16px; z-index: 10;
+  display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; z-index: 10;
   backdrop-filter: blur(8px); touch-action: manipulation;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px); flex-wrap: nowrap; overflow-x: auto;
 }
 .tool-item {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 6px 14px; border-radius: 8px; cursor: default; opacity: 0.5;
-  border: 1px solid transparent; transition: all 0.2s; user-select: none;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 4px 8px; border-radius: 8px; cursor: default; opacity: 0.5;
+  border: 1px solid transparent; transition: all 0.2s; user-select: none; flex-shrink: 0;
 }
 .tool-item.available { opacity: 1; cursor: grab; }
 .tool-item.available:hover { background: rgba(100, 210, 255, 0.1); border-color: rgba(100, 210, 255, 0.3); }
-.tool-item .icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-.tool-item .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.tool-item .icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+.tool-item .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+@media (max-width: 500px) {
+  .tool-item { display: none; }
+  #bottomBar { justify-content: center; gap: 10px; }
+}
 
 #helpText {
   position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
@@ -129,9 +133,11 @@ const V = {
 };
 
 // ─── Constants ──────────────────────────────────────────────────────
-const GRID = 60;
+let GRID = 60;
+const BASE_GRID = 60;
 const MAX_BOUNCES = 25;
 const DEG15 = Math.PI / 12;
+function S(v) { return v * GRID / BASE_GRID; }
 const COLORS = {
   white: '#e0f0ff',
   red: '#ff3355',
@@ -224,17 +230,17 @@ function traceBeams(objects, canvasW, canvasH) {
         let hit = null;
 
         if (obj.type === 'mirror' || obj.type === 'splitter') {
-          const seg = obj.getSegment(28);
+          const seg = obj.getSegment(S(28));
           hit = raySegmentIntersect(origin, dir, seg.a, seg.b);
         } else if (obj.type === 'wall') {
-          const seg = obj.getSegment(30);
+          const seg = obj.getSegment(S(30));
           hit = raySegmentIntersect(origin, dir, seg.a, seg.b);
         } else if (obj.type === 'target') {
-          hit = rayCircleIntersect(origin, dir, obj.x, obj.y, 18);
+          hit = rayCircleIntersect(origin, dir, obj.x, obj.y, S(18));
         } else if (obj.type === 'prism') {
-          hit = rayCircleIntersect(origin, dir, obj.x, obj.y, 22);
+          hit = rayCircleIntersect(origin, dir, obj.x, obj.y, S(22));
         } else if (obj.type === 'filter') {
-          const seg = obj.getSegment(24);
+          const seg = obj.getSegment(S(24));
           hit = raySegmentIntersect(origin, dir, seg.a, seg.b);
         }
 
@@ -249,14 +255,14 @@ function traceBeams(objects, canvasW, canvasH) {
         beams.push({ from: origin, to: closest.point, color });
 
         if (closestObj.type === 'mirror') {
-          const seg = closestObj.getSegment(28);
+          const seg = closestObj.getSegment(S(28));
           const segDir = V.norm(V.sub(seg.b, seg.a));
           let normal = V.perp(segDir);
           if (V.dot(dir, normal) > 0) normal = V.mul(normal, -1);
           const reflected = V.reflect(dir, normal);
           stack.push({ origin: closest.point, dir: V.norm(reflected), color, depth: depth + 1 });
         } else if (closestObj.type === 'splitter') {
-          const seg = closestObj.getSegment(28);
+          const seg = closestObj.getSegment(S(28));
           const segDir = V.norm(V.sub(seg.b, seg.a));
           let normal = V.perp(segDir);
           if (V.dot(dir, normal) > 0) normal = V.mul(normal, -1);
@@ -441,6 +447,7 @@ function resize() {
   H = window.innerHeight;
   canvas.width = W;
   canvas.height = H;
+  if (LEVELS && LEVELS.length > 0) loadLevel(currentLevel);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -453,15 +460,35 @@ function clientToCanvas(clientX, clientY) {
   };
 }
 
+let gridOffsetX = 0, gridOffsetY = 0;
+
+function computeGrid(level) {
+  const topBarH = 56;
+  const bottomBarH = 80;
+  const pad = 40;
+  const playW = W - pad * 2;
+  const playH = H - topBarH - bottomBarH - pad;
+  let maxGx = 0, maxGy = 0;
+  for (const o of level.objects) {
+    if (o.x > maxGx) maxGx = o.x;
+    if (o.y > maxGy) maxGy = o.y;
+  }
+  maxGx = Math.max(maxGx, 1) + 1;
+  maxGy = Math.max(maxGy, 1) + 1;
+  GRID = Math.min(60, Math.floor(playW / maxGx), Math.floor(playH / maxGy));
+  GRID = Math.max(GRID, 20);
+  gridOffsetX = Math.floor((W - maxGx * GRID) / 2);
+  gridOffsetY = topBarH + Math.floor((H - topBarH - bottomBarH - maxGy * GRID) / 2);
+}
+
 function gridToScreen(gx, gy) {
-  const ox = 60;
-  const oy = 70;
-  return { x: ox + gx * GRID, y: oy + gy * GRID };
+  return { x: gridOffsetX + gx * GRID, y: gridOffsetY + gy * GRID };
 }
 
 function loadLevel(idx) {
   currentLevel = Math.max(0, Math.min(idx, LEVELS.length - 1));
   const level = LEVELS[currentLevel];
+  computeGrid(level);
   objects = level.objects.map(o => {
     const pos = gridToScreen(o.x, o.y);
     return new GameObject(o.type, pos.x, pos.y, o.angle || 0, {
@@ -581,7 +608,7 @@ canvas.addEventListener('mousedown', e => {
   const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
-    if (obj.draggable && obj.containsPoint(mx, my, 30)) {
+    if (obj.draggable && obj.containsPoint(mx, my, S(30))) {
       dragging = obj;
       selectedObj = obj;
       dragStartPos = { x: mx, y: my };
@@ -598,13 +625,13 @@ canvas.addEventListener('mousedown', e => {
 canvas.addEventListener('mousemove', e => {
   const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
   if (dragging) {
-    dragging.x = Math.max(30, Math.min(W - 30, mx - dragOffset.x));
-    dragging.y = Math.max(58, Math.min(H - 82, my - dragOffset.y));
+    dragging.x = Math.max(S(30), Math.min(W - S(30), mx - dragOffset.x));
+    dragging.y = Math.max(56, Math.min(H - 80, my - dragOffset.y));
     return;
   }
   let found = null;
   for (let i = objects.length - 1; i >= 0; i--) {
-    if (objects[i].draggable && objects[i].containsPoint(mx, my, 30)) {
+    if (objects[i].draggable && objects[i].containsPoint(mx, my, S(30))) {
       found = objects[i];
       break;
     }
@@ -651,7 +678,7 @@ canvas.addEventListener('touchstart', e => {
   touchStartPos = { x: mx, y: my };
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
-    if (obj.draggable && obj.containsPoint(mx, my, 40)) {
+    if (obj.draggable && obj.containsPoint(mx, my, Math.max(S(30), 40))) {
       dragging = obj;
       selectedObj = obj;
       dragOffset.x = mx - obj.x;
@@ -667,8 +694,8 @@ canvas.addEventListener('touchmove', e => {
   if (dragging) {
     const t = e.touches[0];
     const { x: tx, y: ty } = clientToCanvas(t.clientX, t.clientY);
-    dragging.x = Math.max(30, Math.min(W - 30, tx - dragOffset.x));
-    dragging.y = Math.max(58, Math.min(H - 82, ty - dragOffset.y));
+    dragging.x = Math.max(S(30), Math.min(W - S(30), tx - dragOffset.x));
+    dragging.y = Math.max(56, Math.min(H - 80, ty - dragOffset.y));
     e.preventDefault();
   }
 }, { passive: false });
@@ -731,30 +758,30 @@ function drawLaser(obj) {
   ctx.save();
 
   ctx.shadowColor = '#64d2ff';
-  ctx.shadowBlur = 15;
+  ctx.shadowBlur = S(15);
   ctx.fillStyle = '#1a2a40';
   ctx.strokeStyle = '#64d2ff';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(obj.x, obj.y, 14, 0, Math.PI * 2);
+  ctx.arc(obj.x, obj.y, S(14), 0, Math.PI * 2);
   ctx.fill(); ctx.stroke();
 
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#64d2ff';
   ctx.beginPath();
-  ctx.arc(obj.x + dir.x * 10, obj.y + dir.y * 10, 4, 0, Math.PI * 2);
+  ctx.arc(obj.x + dir.x * S(10), obj.y + dir.y * S(10), S(4), 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = 'rgba(100,210,255,0.3)';
   ctx.beginPath();
-  ctx.arc(obj.x + dir.x * 10, obj.y + dir.y * 10, 7, 0, Math.PI * 2);
+  ctx.arc(obj.x + dir.x * S(10), obj.y + dir.y * S(10), S(7), 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
 }
 
 function drawMirror(obj) {
-  const seg = obj.getSegment(28);
+  const seg = obj.getSegment(S(28));
   const isHovered = hoveredObj === obj;
   const isDraggable = obj.draggable;
 
@@ -787,10 +814,10 @@ function drawMirror(obj) {
   ctx.strokeStyle = 'rgba(100,150,200,0.2)';
   ctx.lineWidth = 1;
   for (let i = -2; i <= 2; i++) {
-    const p = V.add({ x: obj.x, y: obj.y }, V.mul(bDir, i * 10));
+    const p = V.add({ x: obj.x, y: obj.y }, V.mul(bDir, i * S(10)));
     ctx.beginPath();
-    ctx.moveTo(p.x + backOff.x * 4, p.y + backOff.y * 4);
-    ctx.lineTo(p.x + backOff.x * 10, p.y + backOff.y * 10);
+    ctx.moveTo(p.x + backOff.x * S(4), p.y + backOff.y * S(4));
+    ctx.lineTo(p.x + backOff.x * S(10), p.y + backOff.y * S(10));
     ctx.stroke();
   }
 
@@ -798,7 +825,7 @@ function drawMirror(obj) {
 }
 
 function drawSplitter(obj) {
-  const seg = obj.getSegment(28);
+  const seg = obj.getSegment(S(28));
   const isHovered = hoveredObj === obj;
 
   ctx.save();
@@ -829,7 +856,7 @@ function drawSplitter(obj) {
 
 function drawPrism(obj) {
   const isHovered = hoveredObj === obj;
-  const size = 22;
+  const size = S(22);
   ctx.save();
   ctx.translate(obj.x, obj.y);
   ctx.rotate(obj.angle);
@@ -869,32 +896,32 @@ function drawTarget(obj) {
 
   if (obj.hit) {
     ctx.shadowColor = colStr;
-    ctx.shadowBlur = 25;
+    ctx.shadowBlur = S(25);
     ctx.fillStyle = colStr;
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
-    ctx.arc(obj.x, obj.y, 20 * pulse, 0, Math.PI * 2);
+    ctx.arc(obj.x, obj.y, S(20) * pulse, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.globalAlpha = 1;
     ctx.fillStyle = colStr;
     ctx.beginPath();
-    ctx.arc(obj.x, obj.y, 10, 0, Math.PI * 2);
+    ctx.arc(obj.x, obj.y, S(10), 0, Math.PI * 2);
     ctx.fill();
   } else {
     ctx.strokeStyle = `rgba(${gc[0]},${gc[1]},${gc[2]},${0.4 + pulse * 0.2})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(obj.x, obj.y, 14, 0, Math.PI * 2);
+    ctx.arc(obj.x, obj.y, S(14), 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(obj.x, obj.y, 6, 0, Math.PI * 2);
+    ctx.arc(obj.x, obj.y, S(6), 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.fillStyle = `rgba(${gc[0]},${gc[1]},${gc[2]},0.15)`;
     ctx.beginPath();
-    ctx.arc(obj.x, obj.y, 14, 0, Math.PI * 2);
+    ctx.arc(obj.x, obj.y, S(14), 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -902,7 +929,7 @@ function drawTarget(obj) {
 }
 
 function drawWall(obj) {
-  const seg = obj.getSegment(30);
+  const seg = obj.getSegment(S(30));
   ctx.save();
   ctx.strokeStyle = '#445566';
   ctx.lineWidth = 6;
@@ -922,7 +949,7 @@ function drawWall(obj) {
 }
 
 function drawFilter(obj) {
-  const seg = obj.getSegment(24);
+  const seg = obj.getSegment(S(24));
   const gc = GLOW_COLORS[obj.color] || GLOW_COLORS.white;
   const isHovered = hoveredObj === obj;
 
@@ -939,10 +966,10 @@ function drawFilter(obj) {
   const dir = V.norm(V.sub(seg.b, seg.a));
   const n = V.perp(dir);
   ctx.beginPath();
-  ctx.moveTo(seg.a.x - n.x * 6, seg.a.y - n.y * 6);
-  ctx.lineTo(seg.b.x - n.x * 6, seg.b.y - n.y * 6);
-  ctx.lineTo(seg.b.x + n.x * 6, seg.b.y + n.y * 6);
-  ctx.lineTo(seg.a.x + n.x * 6, seg.a.y + n.y * 6);
+  ctx.moveTo(seg.a.x - n.x * S(6), seg.a.y - n.y * S(6));
+  ctx.lineTo(seg.b.x - n.x * S(6), seg.b.y - n.y * S(6));
+  ctx.lineTo(seg.b.x + n.x * S(6), seg.b.y + n.y * S(6));
+  ctx.lineTo(seg.a.x + n.x * S(6), seg.a.y + n.y * S(6));
   ctx.closePath();
   ctx.fill();
 
@@ -973,7 +1000,7 @@ function drawSelectionRing(obj) {
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 4]);
   ctx.beginPath();
-  ctx.arc(obj.x, obj.y, 38, 0, Math.PI * 2);
+  ctx.arc(obj.x, obj.y, S(38), 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
@@ -981,12 +1008,13 @@ function drawSelectionRing(obj) {
 
 function drawRotateHint(obj) {
   if (!obj || !obj.rotatable || dragging) return;
+  const r = S(35);
   ctx.save();
   ctx.strokeStyle = 'rgba(100,210,255,0.2)';
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
-  ctx.arc(obj.x, obj.y, 35, 0, Math.PI * 2);
+  ctx.arc(obj.x, obj.y, r, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
 
@@ -995,11 +1023,11 @@ function drawRotateHint(obj) {
   ctx.strokeStyle = 'rgba(100,210,255,0.35)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(obj.x, obj.y, 35, a1, a2);
+  ctx.arc(obj.x, obj.y, r, a1, a2);
   ctx.stroke();
 
-  const endX = obj.x + Math.cos(a2) * 35;
-  const endY = obj.y + Math.sin(a2) * 35;
+  const endX = obj.x + Math.cos(a2) * r;
+  const endY = obj.y + Math.sin(a2) * r;
   ctx.fillStyle = 'rgba(100,210,255,0.4)';
   ctx.beginPath();
   ctx.moveTo(endX, endY);
