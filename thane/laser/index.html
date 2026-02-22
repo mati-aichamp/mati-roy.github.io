@@ -85,7 +85,7 @@ canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height:
 
 <canvas id="gameCanvas"></canvas>
 
-<div id="helpText">Drag objects to move &bull; Scroll wheel to rotate &bull; Hit all targets!</div>
+<div id="helpText">Drag to move &bull; Click to rotate &bull; Arrow keys also rotate &bull; Hit all targets!</div>
 
 <div id="bottomBar" role="toolbar"></div>
 
@@ -523,9 +523,9 @@ function updateToolbar() {
 function updateHelpText() {
   const el = document.getElementById('helpText');
   if (currentLevel === 0) {
-    el.textContent = 'Drag the mirror and scroll to rotate it. Aim the laser at the target!';
+    el.textContent = 'Drag to move, click to rotate. Arrow keys also rotate. Aim the laser at the target!';
   } else {
-    el.textContent = 'Drag objects to move \u2022 Scroll wheel to rotate \u2022 Hit all targets!';
+    el.textContent = 'Drag to move \u2022 Click to rotate \u2022 Arrow keys also rotate \u2022 Hit all targets!';
   }
 }
 
@@ -567,6 +567,7 @@ function drawFilterIcon(ctx, cx, cy) {
 }
 
 // ─── Input Handling ─────────────────────────────────────────────────
+let dragStartPos = { x: 0, y: 0 };
 canvas.addEventListener('mousedown', e => {
   if (levelWon) return;
   const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
@@ -575,6 +576,7 @@ canvas.addEventListener('mousedown', e => {
     if (obj.draggable && obj.containsPoint(mx, my, 30)) {
       dragging = obj;
       selectedObj = obj;
+      dragStartPos = { x: mx, y: my };
       dragOffset.x = mx - obj.x;
       dragOffset.y = my - obj.y;
       hoveredObj = obj;
@@ -603,8 +605,13 @@ canvas.addEventListener('mousemove', e => {
   canvas.style.cursor = found ? 'grab' : 'default';
 });
 
-canvas.addEventListener('mouseup', () => {
+canvas.addEventListener('mouseup', e => {
   if (dragging) {
+    const { x: mx, y: my } = clientToCanvas(e.clientX, e.clientY);
+    const dist = Math.hypot(mx - dragStartPos.x, my - dragStartPos.y);
+    if (dist < 5 && dragging.rotatable) {
+      dragging.angle += DEG15;
+    }
     dragging = null;
     canvas.style.cursor = hoveredObj ? 'grab' : 'default';
   }
@@ -618,11 +625,21 @@ canvas.addEventListener('wheel', e => {
   }
 }, { passive: false });
 
+document.addEventListener('keydown', e => {
+  const target = hoveredObj || selectedObj;
+  if (target && target.rotatable) {
+    if (e.key === 'ArrowLeft' || e.key === 'a') { target.angle -= DEG15; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd') { target.angle += DEG15; e.preventDefault(); }
+  }
+});
+
 // Touch support
+let touchStartPos = { x: 0, y: 0 };
 canvas.addEventListener('touchstart', e => {
   if (levelWon) return;
   const t = e.touches[0];
   const { x: mx, y: my } = clientToCanvas(t.clientX, t.clientY);
+  touchStartPos = { x: mx, y: my };
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
     if (obj.draggable && obj.containsPoint(mx, my, 40)) {
@@ -647,7 +664,17 @@ canvas.addEventListener('touchmove', e => {
   }
 }, { passive: false });
 
-canvas.addEventListener('touchend', () => { dragging = null; });
+canvas.addEventListener('touchend', e => {
+  if (dragging) {
+    const t = e.changedTouches[0];
+    const { x: tx, y: ty } = clientToCanvas(t.clientX, t.clientY);
+    const dist = Math.hypot(tx - touchStartPos.x, ty - touchStartPos.y);
+    if (dist < 10 && dragging.rotatable) {
+      dragging.angle += DEG15;
+    }
+    dragging = null;
+  }
+});
 
 // ─── Button Handlers ────────────────────────────────────────────────
 document.getElementById('btnReset').onclick = resetLevel;
